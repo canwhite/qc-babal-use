@@ -150,6 +150,7 @@ module.exports = function(api, options) {
 const sourceCode = fs.readFileSync(path.join(__dirname, './sourceCode.js'), {
     encoding: 'utf-8'
 });
+/* console.log(sourceCode); */
 const ast = parser.parse(sourceCode, {
     sourceType: 'unambiguous',
     plugins: ['jsx']

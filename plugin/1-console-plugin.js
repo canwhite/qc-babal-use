@@ -15,7 +15,7 @@ module.exports = function({types, template}) {
                     const { line, column } = path.node.loc.start;
                     //置换表达式
                     const newNode = template.expression(`console.log("${state.file.filename || 'unkown filename'}: (${line}, ${column})")`)();
-                    console.log("--newNode--",newNode); 
+                    // console.log("--newNode--",newNode); 
                     /* {
                         type: 'CallExpression',
                         callee: {
