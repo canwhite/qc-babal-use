@@ -28,7 +28,7 @@ const template = require('@babel/template').default;
 
 
 //version4需要从core里边拿一个transformFromAstSync
-const { transformFromAstSync } = require('@babel/core');
+const { transformFromAstSync,transformFromAstAsync } = require('@babel/core');
 const insertParametersPlugin = require('./plugin/1-console-plugin');
 const fs = require('fs');
 const path = require('path');
@@ -158,6 +158,16 @@ const ast = parser.parse(sourceCode, {
 const {code} = transformFromAstSync(ast,sourceCode,{
     plugins:[insertParametersPlugin]
 })
+
+/* const sourceCode = "if (true) return;";
+babel.parseAsync(sourceCode, { parserOpts: { allowReturnOutsideFunction: true } })
+  .then(parsedAst => {
+    return babel.transformFromAstAsync(parsedAst, sourceCode, options);
+  })
+  .then(({ code, map, ast }) => {
+    // ...
+}); */
+
 
 console.log(code);
  
