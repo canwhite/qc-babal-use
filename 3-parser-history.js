@@ -17,14 +17,18 @@ ImportExpression 替换为了 CallExpression 并且 callee 属性设置为 Impor
 
 //babel parser 基于acorn扩展了一些语法，那么它是怎么扩展的呢，我们写一个acorn插件来感受下
 
-const {Parser} = require("acorn");
+const acorn = require("acorn");
+const Parser = acorn.Parser;//拿到Parser
+const TokenType = acorn.TokenType;//拿到TokenType
+
+
 //通过extend拓展parser并创建Parser，这点怎么这么像Vue
-const MyParser = Parser.extend(
+/* const MyParser = Parser.extend(
     require("acorn-jsx")(),
     require("acorn-bigint")
 )
 let ast =  MyParser.parse("// Some bigint + JSX code")
-console.log(ast)
+console.log(ast) */
 
 //关于插件，接收一个之前的Parser，返回拓展之后的Parser
 /* module.exports = function noisyReadToken(Parser) {
@@ -48,27 +52,86 @@ console.log(ast)
 2.组装ast（语法分析）
 */
 
-/*=======================================================================
-1.分词
-我们想要增加一个关键字，acorn有keywords属性，是一个正则表达式，用来作关键字拆分
-所以我们重写keywords属性就可以
-并且我们还要为新的关键字注册一个token类型
-acron Parser的入口方法是parse,我们要在
-========================================================================*/
 
-var guangKeyword = function(Parser){
+//1-2.然后注册一个新的token类型来标识它，
+//这样acorn就会在parse的时候分出guang这个关键词了
+Parser.acorn.keywordTypes["guang"] = new TokenType(
+  "guang",
+  {keyword: "guang"}
+);
 
+var guangKeywordPlugin = function(Parser){
     return class extends Parser{
-
-        parse(){
-
-
+        /*=======================================================================
+          1.分词
+          我们想要增加一个关键字，acorn有keywords属性，是一个正则表达式，用来作关键字拆分
+          所以我们重写keywords属性就可以
+          并且我们还要为新的关键字注册一个token类型
+          acron Parser的入口方法是parse,我们要在
+        ========================================================================*/
+        //1-1.我们想要增加一个关键字，acorn有keywords属性，是一个正则表达式，用来作关键字拆分
+        //所以我们重写keywords属性就可以
+        parse(program){
+          let newKeywords = "break case catch continue debugger default do else finally for function if return switch throw try var while with null true false instanceof typeof void delete new in this const class extends export import super";
+          newKeywords += "guang";
+          //目的就是重写这个keywords
+          this.keywords = new RegExp("^(?:" + newKeywords.replace(/ /g, "|") + ")$");
+          //返回我们想要返回的内容
+          return(super.parse(program))
         }
+        /*
+          2.组装AST
+          光分出token是没有用的，要组装到ast中
+          acorn在parse到不同的类型的节点会调用不同的parseXxx方法
+          因为我们是在statement里边用，
+          所以我们要重写parseStatement，这里也主要通过重写来完成组装
+          在里边组装新的statement节点
+        */
+
+        parseStatement(context,topLevel,exports){
+
+          //this.type是当前要处理到的token类型
+          var tokenType = this.type;
+          if(tokenType == Parser.acorn.keywordTypes["guang"]){
+            //通过this.startNode创建一个新的AST节点
+            var node = this.startNode();
+            //然后消费掉这个token
+            return this.parseGuangStatement(node);
+
+          }else{
+            //如果不是我们拓展的token，就调用父类的parseStatement处理
+            return(super.parseStatement(context,topLevel,exports));
+
+          }
+        }
+        parseGuangStatement(node) {
+          this.next();
+          return this.finishNode({value: 'guang'},'GuangStatement');
+        }
+
+        /* parseLiteral (...args) {
+          const node = super.parseLiteral(...args);
+          switch(typeof node.value) {
+              case 'number':
+                  node.type = 'NumericLiteral';
+                  break;
+              case 'string':
+                  node.type = 'StringLiteral';
+                  break;
+          }
+          return  node;
+        } */
+
     }
 }
 
+const newParser = Parser.extend(guangKeywordPlugin);
 
+var program = 
+`
+    guang
+    const a = 1
+`;
 
-
-
-
+const ast2 = newParser.parse(program);
+console.log(ast2);
